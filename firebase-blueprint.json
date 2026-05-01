@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "Day": {
+      "title": "Day",
+      "description": "Daily reflection and score",
+      "type": "object",
+      "properties": {
+        "score": { "type": "number", "description": "Score from 0 to 10" },
+        "reflection": { "type": "string", "description": "Daily notes or reflection" },
+        "userId": { "type": "string", "description": "Owner UID" },
+        "date": { "type": "string", "description": "ISO Date string YYYY-MM-DD" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["score", "userId", "date"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A task for the day",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "isPredefined": { "type": "boolean" },
+        "userId": { "type": "string" },
+        "reminderTime": { "type": "string", "description": "ISO string or HH:mm for the reminder" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "completed", "userId"]
+    },
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "User preferences and predefined tasks",
+      "type": "object",
+      "properties": {
+        "predefinedTasks": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "theme": { "type": "string", "enum": ["rose", "lavender", "sage", "ocean"], "description": "App visual theme" },
+        "userId": { "type": "string" }
+      },
+      "required": ["userId"]
+    }
+  },
+  "firestore": {
+    "/days/{dayId}": {
+      "schema": "Day",
+      "description": "Daily scores"
+    },
+    "/days/{dayId}/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Daily tasks"
+    },
+    "/settings/{userId}": {
+      "schema": "UserSettings",
+      "description": "User settings"
+    }
+  }
+}

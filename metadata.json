@@ -1,0 +1,6 @@
+{
+  "name": "My DaiZ",
+  "description": "A vibrant daily tracker for scoring the day and managing tasks.",
+  "requestFramePermissions": ["notifications"],
+  "majorCapabilities": []
+}
