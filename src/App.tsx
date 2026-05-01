@@ -26,13 +26,50 @@ import {
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
 import { cn } from './lib/utils';
 
+// Utility for gentle sound effect
+const playBloomSound = () => {
+  try {
+    const AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    // Create a gentle, blooming "ping" sound
+    osc.type = 'sine';
+    // Start at a pleasant frequency (E5) and slide up slightly to B5 for an "encouraging" lift
+    osc.frequency.setValueAtTime(659.25, ctx.currentTime); 
+    osc.frequency.exponentialRampToValueAtTime(987.77, ctx.currentTime + 0.4);
+    
+    // Smooth volume envelope to avoid clicks
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.6);
+    
+    // Close context after playback to save resources
+    setTimeout(() => {
+      ctx.close();
+    }, 1000);
+  } catch (e) {
+    // Fail silently if audio is blocked or unsupported
+    console.warn("Audio playback failed", e);
+  }
+};
+
 const THEMES = [
   { id: 'rose', name: { en: 'Rose Bloom', fr: 'Éclosion Rose' }, color: 'rose' },
   { id: 'sky', name: { en: 'Azure Sky', fr: 'Ciel Azur' }, color: 'sky' },
   { id: 'emerald', name: { en: 'Emerald Garden', fr: 'Jardin Émeraude' }, color: 'emerald' },
   { id: 'amber', name: { en: 'Golden Glow', fr: 'Lueur Dorée' }, color: 'amber' },
   { id: 'violet', name: { en: 'Violet Dream', fr: 'Rêve Violet' }, color: 'violet' },
-  { id: 'slate', name: { en: 'Midnight Slate', fr: 'Ardoise Nuiz' }, color: 'slate' },
+  { id: 'slate', name: { en: 'Midnight Slate', fr: 'Ardoise Nuit' }, color: 'slate' },
 ];
 
 const translations = {
@@ -181,13 +218,13 @@ export default function App() {
   const tBase = THEMES.find(th => th.id === theme)?.color || 'rose';
   
   const themeColors = {
-    rose: { primary: 'rose-500', light: 'rose-50', border: 'rose-100', bg: '#FFF5F7', text: 'rose-600', muted: 'rose-400', shadow: 'rose-100/50', ring: 'rose-400' },
-    sky: { primary: 'sky-500', light: 'sky-50', border: 'sky-100', bg: '#F0F9FF', text: 'sky-600', muted: 'sky-400', shadow: 'sky-100/50', ring: 'sky-400' },
-    emerald: { primary: 'emerald-500', light: 'emerald-50', border: 'emerald-100', bg: '#F0FDF4', text: 'emerald-600', muted: 'emerald-400', shadow: 'emerald-100/50', ring: 'emerald-400' },
-    amber: { primary: 'amber-500', light: 'amber-50', border: 'amber-100', bg: '#FFFBEB', text: 'amber-600', muted: 'amber-400', shadow: 'amber-100/50', ring: 'amber-400' },
-    violet: { primary: 'violet-500', light: 'violet-50', border: 'violet-100', bg: '#F5F3FF', text: 'violet-600', muted: 'violet-400', shadow: 'violet-100/50', ring: 'violet-400' },
-    slate: { primary: 'slate-500', light: 'slate-50', border: 'slate-100', bg: '#F8FAFC', text: 'slate-600', muted: 'slate-400', shadow: 'slate-100/50', ring: 'slate-400' },
-  }[theme] || { primary: 'rose-500', light: 'rose-50', border: 'rose-100', bg: '#FFF5F7', text: 'rose-600', muted: 'rose-400', shadow: 'rose-100/50', ring: 'rose-400' };
+    rose: { bg: '#FFF5F7' },
+    sky: { bg: '#F0F9FF' },
+    emerald: { bg: '#F0FDF4' },
+    amber: { bg: '#FFFBEB' },
+    violet: { bg: '#F5F3FF' },
+    slate: { bg: '#F8FAFC' },
+  }[theme] || { bg: '#FFF5F7' };
 
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -245,12 +282,12 @@ export default function App() {
             rotate: { duration: 3, repeat: Infinity, ease: "linear" },
             scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
           }}
-          className={cn("p-8 bg-white rounded-[40px] shadow-2xl border-b-2 shadow-opacity-10", `shadow-${tBase}-100 border-${tBase}-50`)}
+          className={cn("p-8 bg-white rounded-[40px] shadow-2xl shadow-opacity-10", `shadow-${tBase}-100`)}
         >
           <Flower2 className={cn("w-16 h-16", `text-${tBase}-400`)} />
         </motion.div>
         <div className="flex flex-col items-center gap-2">
-          <h2 className={cn("text-2xl font-black tracking-tighter", `text-${tBase}-600`)}>Preparing your garden...</h2>
+          <h2 className={cn("text-2xl font-bold tracking-tighter", `text-${tBase}-600`)}>Preparing your garden...</h2>
           <div className="flex gap-1">
              {[0, 1, 2].map(i => (
                <motion.div 
@@ -275,16 +312,16 @@ export default function App() {
           className="text-center max-w-md w-full"
         >
           <div className="mb-8 flex justify-center">
-            <div className={cn("p-6 bg-white rounded-[40px] shadow-xl border-b-2 shadow-opacity-10", `shadow-${tBase}-50 border-${tBase}-50`)}>
+            <div className={cn("p-6 bg-white rounded-[40px] shadow-xl shadow-opacity-10", `shadow-${tBase}-50`)}>
               <Flower2 className={cn("w-16 h-16", `text-${tBase}-500`)} />
             </div>
           </div>
-          <h1 className={cn("text-5xl font-black mb-4", `text-${tBase}-600`)}>{t.appName}</h1>
+          <h1 className={cn("text-5xl font-bold mb-4", `text-${tBase}-600`)}>{t.appName}</h1>
           <p className={cn("mb-10 text-lg font-bold", `text-${tBase}-400`)}>{t.tagline}</p>
           <button
             onClick={handleLogin}
             className={cn(
-              "w-full py-5 text-white rounded-3xl font-black text-lg transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 shadow-opacity-20",
+              "w-full py-5 text-white rounded-3xl font-bold text-lg transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 shadow-opacity-20",
               `bg-${tBase}-500 hover:bg-${tBase}-600 shadow-${tBase}-100`
             )}
           >
@@ -335,10 +372,10 @@ export default function App() {
       <NotificationManager tasks={tasks} date={selectedDate} lang={lang} />
       <BloomCelebration active={progress === 100 && tasks.length > 0} color={tBase} />
       {/* Mobile Header */}
-      <div className={cn("md:hidden flex items-center justify-between p-5 bg-white border-b-2", `border-${tBase}-50`)}>
+      <div className={cn("md:hidden flex items-center justify-between p-5 bg-white shadow-sm")}>
         <div className="flex items-center gap-2">
           <Flower2 className={cn("w-6 h-6", `text-${tBase}-500`)} />
-          <span className={cn("text-2xl font-black", `text-${tBase}-600`)}>{t.appName}</span>
+          <span className={cn("text-2xl font-bold", `text-${tBase}-600`)}>{t.appName}</span>
         </div>
         <button onClick={() => setActiveTab('settings')} className={cn("p-2 rounded-xl bg-opacity-50", `bg-${tBase}-50 text-${tBase}-500`)}>
           <Settings size={24} />
@@ -346,12 +383,12 @@ export default function App() {
       </div>
 
       {/* Sidebar - Navigation */}
-      <nav className={cn("hidden md:flex w-80 bg-white border-r-2 p-8 flex-col gap-10 flex-shrink-0", `border-${tBase}-50`)}>
+      <nav className={cn("hidden md:flex w-80 bg-white p-8 flex-col gap-10 flex-shrink-0")}>
         <div className="flex items-center gap-3">
           <div className={cn("p-2 rounded-2xl", `bg-${tBase}-50`)}>
             <Flower2 className={cn("w-8 h-8", `text-${tBase}-500`)} />
           </div>
-          <span className={cn("text-3xl font-black tracking-tight", `text-${tBase}-600`)}>{t.appName}</span>
+          <span className={cn("text-3xl font-bold tracking-tight", `text-${tBase}-600`)}>{t.appName}</span>
         </div>
 
         <div className="flex flex-col gap-3 flex-grow">
@@ -378,22 +415,22 @@ export default function App() {
           />
         </div>
 
-        <div className={cn("pt-8 border-t-2", `border-${tBase}-50`)}>
+        <div className="pt-8 flex flex-col">
           <div className="flex items-center gap-4 mb-6">
             <img 
               src={user.photoURL || ''} 
               alt={user.displayName || ''} 
-              className={cn("w-12 h-12 rounded-2xl border-2 shadow-sm", `border-${tBase}-100`)}
+              className={cn("w-12 h-12 rounded-2xl shadow-sm")}
               referrerPolicy="no-referrer"
             />
             <div className="flex flex-col overflow-hidden">
-              <span className="text-base font-black text-gray-700 truncate">{user.displayName?.split(' ')[0]}</span>
-              <span className={cn("text-[10px] font-black uppercase tracking-widest truncate", `text-${tBase}-400`)}>{t.gardener}</span>
+              <span className="text-base font-bold text-gray-700 truncate">{user.displayName?.split(' ')[0]}</span>
+              <span className={cn("text-[10px] font-bold uppercase tracking-widest truncate", `text-${tBase}-400`)}>{t.gardener}</span>
             </div>
           </div>
           <button 
             onClick={handleLogout}
-            className={cn("flex items-center gap-2 text-sm font-black transition-colors w-full p-2 text-gray-300", `hover:text-${tBase}-500`)}
+            className={cn("flex items-center gap-2 text-sm font-bold transition-colors w-full p-2 text-gray-300", `hover:text-${tBase}-500`)}
           >
             <LogOut size={18} />
             {t.logout}
@@ -414,10 +451,10 @@ export default function App() {
             >
               <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
                 <div className="space-y-1">
-                  <h1 className={cn("text-4xl md:text-5xl font-black", `text-${tBase}-600`)}>{getGreeting()}, {user.displayName?.split(' ')[0]} ! ✨</h1>
+                  <h1 className={cn("text-4xl md:text-5xl font-bold", `text-${tBase}-600`)}>{getGreeting()}, {user.displayName?.split(' ')[0]} ! ✨</h1>
                   <p className={cn("text-lg md:text-xl font-bold tracking-tight", `text-${tBase}-400`)}>{t.howDay}</p>
                 </div>
-                <div className={cn("bg-white px-6 py-3 rounded-2xl border-2 shadow-sm flex items-center gap-4", `border-${tBase}-100`)}>
+                <div className={cn("bg-white px-6 py-3 rounded-2xl shadow-sm flex items-center gap-4")}>
                   <button 
                     onClick={() => canGoBack && setSelectedDate(subDays(selectedDate, 1))}
                     disabled={!canGoBack}
@@ -429,8 +466,8 @@ export default function App() {
                     <ChevronLeft size={24} />
                   </button>
                   <div className="text-center min-w-[120px]">
-                    <div className={cn("text-[10px] uppercase tracking-widest font-black", `text-${tBase}-400`)}>{format(selectedDate, 'EEEE', { locale })}</div>
-                    <div className={cn("text-xl font-black uppercase", `text-${tBase}-500`)}>{format(selectedDate, 'd MMMM', { locale })}</div>
+                    <div className={cn("text-[10px] uppercase tracking-widest font-bold", `text-${tBase}-400`)}>{format(selectedDate, 'EEEE', { locale })}</div>
+                    <div className={cn("text-xl font-bold uppercase", `text-${tBase}-500`)}>{format(selectedDate, 'd MMMM', { locale })}</div>
                   </div>
                   <button 
                     onClick={() => canGoForward && setSelectedDate(addDays(selectedDate, 1))}
@@ -449,12 +486,12 @@ export default function App() {
                 {/* Tasks Section */}
                 <section className="lg:col-span-7 flex flex-col gap-6">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-black text-gray-700 flex items-center gap-4">
+                    <h2 className="text-2xl font-bold text-gray-700 flex items-center gap-4">
                       <span className={cn("w-2.5 h-10 rounded-full", `bg-${tBase}-400`)}></span>
                       {t.checklist}
                     </h2>
                     {isToday(selectedDate) && (
-                      <span className={cn("px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest border-2", `bg-${tBase}-50 text-${tBase}-500 border-${tBase}-100`)}>
+                      <span className={cn("px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest", `bg-${tBase}-50 text-${tBase}-500`)}>
                         {t.today}
                       </span>
                     )}
@@ -464,24 +501,24 @@ export default function App() {
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className={cn("bg-white p-5 rounded-3xl border-2 shadow-sm", `border-${tBase}-50`)}
+                      className={cn("bg-white p-5 rounded-3xl shadow-sm")}
                     >
                       <div className="flex items-center justify-between mb-3">
-                        <span className={cn("text-[10px] font-black uppercase tracking-widest", `text-${tBase}-400`)}>Progress</span>
+                        <span className={cn("text-[10px] font-bold uppercase tracking-widest", `text-${tBase}-400`)}>Progress</span>
                         <div className="flex items-center gap-2">
                           {progress === 100 && (
                             <motion.span 
                               initial={{ opacity: 0, scale: 0 }}
                               animate={{ opacity: 1, scale: 1 }}
-                              className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1"
+                              className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1"
                             >
                               <Star size={10} fill="currentColor" /> {lang === 'fr' ? 'ÉCLOSION !' : 'BLOOMED!'}
                             </motion.span>
                           )}
-                          <span className={cn("text-sm font-black", `text-${tBase}-600`)}>{Math.round(progress)}%</span>
+                          <span className={cn("text-sm font-bold", `text-${tBase}-600`)}>{Math.round(progress)}%</span>
                         </div>
                       </div>
-                      <div className={cn("h-3 rounded-full overflow-hidden p-0.5 border-2 shadow-inner", `bg-${tBase}-50 border-${tBase}-100`)}>
+                      <div className={cn("h-3 rounded-full overflow-hidden p-0.5 shadow-inner", `bg-${tBase}-50`)}>
                         <motion.div 
                           className={cn("h-full rounded-full shadow-sm bg-gradient-to-r", `from-${tBase}-400 to-${tBase}-600`)}
                           initial={{ width: 0 }}
@@ -490,7 +527,7 @@ export default function App() {
                         />
                       </div>
                       <div className="mt-3 flex justify-center items-center gap-1">
-                         <span className={cn("text-[10px] font-black", `text-${tBase}-400`)}>{completedTasks} {lang === 'fr' ? 'pétales éclos' : 'petals bloomed'}</span>
+                         <span className={cn("text-[10px] font-bold", `text-${tBase}-400`)}>{completedTasks} {lang === 'fr' ? 'pétales éclos' : 'petals bloomed'}</span>
                          <span className={cn("text-[10px] italic", `text-${tBase}-100`)}>/ {totalTasks}</span>
                       </div>
                     </motion.div>
@@ -533,14 +570,14 @@ export default function App() {
                         ))}
                       </motion.div>
                     ) : (
-                      <div className={cn("text-center py-12 bg-white rounded-3xl border-2 border-dashed", `border-${tBase}-100`)}>
+                      <div className={cn("text-center py-12 bg-white rounded-3xl")}>
                         <Flower2 className={cn("w-10 h-10 mx-auto mb-3", `text-${tBase}-100`)} />
-                        <p className={cn("font-black", `text-${tBase}-400`)}>{t.emptyGarden}</p>
+                        <p className={cn("font-bold", `text-${tBase}-400`)}>{t.emptyGarden}</p>
                       </div>
                     )}
 
                     {!isPast && (
-                      <div className={cn("task-card flex items-center gap-4 p-5 border-2 border-dashed rounded-2xl group transition-all shadow-sm bg-opacity-50", `bg-${tBase}-50 border-${tBase}-100 focus-within:border-${tBase}-400`)}>
+                      <div className={cn("task-card flex items-center gap-4 p-5 rounded-2xl group transition-all shadow-sm bg-opacity-50", `bg-${tBase}-50 focus-within:bg-${tBase}-100`)}>
                         <button 
                           onClick={() => {
                             if (newTaskText.trim()) {
@@ -548,14 +585,14 @@ export default function App() {
                               setNewTaskText('');
                             }
                           }}
-                          className={cn("w-10 h-10 rounded-xl border-2 bg-white flex items-center justify-center font-black transition-all active:scale-90 shadow-sm", `border-${tBase}-100 text-${tBase}-400 hover:bg-${tBase}-500 hover:text-white hover:border-${tBase}-500`)}
+                          className={cn("w-10 h-10 rounded-xl bg-white flex items-center justify-center font-bold transition-all active:scale-90 shadow-sm", `text-${tBase}-400 hover:bg-${tBase}-500 hover:text-white`)}
                         >
                           <Plus size={20} />
                         </button>
                         <input 
                           type="text" 
                           placeholder={t.addPetal}
-                          className={cn("flex-grow bg-transparent border-none focus:ring-0 text-lg font-black placeholder:italic", `text-${tBase}-600 placeholder:${tBase}-400/30`)}
+                          className={cn("flex-grow bg-transparent border-none focus:ring-0 text-lg font-bold placeholder:italic", `text-${tBase}-600 placeholder:${tBase}-400/30`)}
                           value={newTaskText}
                           onChange={(e) => setNewTaskText(e.target.value)}
                           onKeyDown={(e) => {
@@ -572,7 +609,7 @@ export default function App() {
 
                 {/* Score & Reflection Section */}
                 <section className="lg:col-span-5 flex flex-col gap-8">
-                  <div className={cn("bg-white rounded-[40px] p-10 shadow-2xl flex flex-col items-center justify-center gap-8 border-b-2 shadow-opacity-30", `shadow-${tBase}-100 border-${tBase}-50`)}>
+                  <div className={cn("bg-white rounded-[40px] p-10 shadow-2xl flex flex-col items-center justify-center gap-8 shadow-opacity-30", `shadow-${tBase}-100`)}>
                     <div className="relative w-56 h-56">
                       <svg className="w-full h-full transform -rotate-90">
                         <circle cx="112" cy="112" r="100" stroke="currentColor" strokeWidth="16" fill="transparent" className={cn(`text-${tBase}-50`)}></circle>
@@ -591,14 +628,14 @@ export default function App() {
                         ></motion.circle>
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                        <span className="text-6xl font-black text-gray-700">{calculatedScore * 10}</span>
-                        <span className={cn("text-[10px] font-black uppercase tracking-widest mt-1 block", `text-${tBase}-400`)}>{t.glowPoints}</span>
+                        <span className="text-6xl font-bold text-gray-700">{calculatedScore * 10}</span>
+                        <span className={cn("text-[10px] font-bold uppercase tracking-widest mt-1 block", `text-${tBase}-400`)}>{t.glowPoints}</span>
                       </div>
                     </div>
 
                     <div className="w-full space-y-4">
                       <div className="flex items-center justify-between">
-                        <h4 className={cn("text-sm font-black uppercase tracking-widest", `text-${tBase}-400`)}>{t.eveningNotes}</h4>
+                        <h4 className={cn("text-sm font-bold uppercase tracking-widest", `text-${tBase}-400`)}>{t.eveningNotes}</h4>
                         {reflectionInput !== (day?.reflection || '') && (
                           <motion.button
                             initial={{ opacity: 0, scale: 0.8 }}
@@ -608,7 +645,7 @@ export default function App() {
                               await updateNote(reflectionInput);
                               setIsNoteSaving(false);
                             }}
-                            className={cn("text-[10px] font-black uppercase tracking-widest bg-opacity-50 px-3 py-1 rounded-lg border transition-colors", `text-${tBase}-600 bg-${tBase}-50 border-${tBase}-100 hover:bg-${tBase}-100`)}
+                             className={cn("text-[10px] font-bold uppercase tracking-widest bg-opacity-50 px-3 py-1 rounded-lg transition-colors", `text-${tBase}-600 bg-${tBase}-50 hover:bg-${tBase}-100`)}
                           >
                             {isNoteSaving ? '...' : (t as any).saveNote}
                           </motion.button>
@@ -616,8 +653,8 @@ export default function App() {
                       </div>
                       <textarea 
                         className={cn(
-                          "w-full min-h-[140px] border-2 border-transparent rounded-[28px] p-6 focus:ring-0 resize-none font-bold placeholder:italic transition-all",
-                          `bg-${tBase}-50 focus:border-${tBase}-100 text-${tBase}-600 placeholder:${tBase}-400/30`,
+                          "w-full min-h-[140px] border-none rounded-[28px] p-6 focus:ring-0 resize-none font-bold placeholder:italic transition-all",
+                          `bg-${tBase}-50 text-${tBase}-600 placeholder:${tBase}-400/30`,
                           isPast && `bg-${tBase}-50/50`
                         )}
                         placeholder={t.reflectionPlaceholder}
@@ -630,7 +667,7 @@ export default function App() {
                       <motion.button 
                         whileTap={{ scale: 0.95 }}
                         onClick={() => updateScoreAndReflection(calculatedScore, reflectionInput)}
-                        className={cn("w-full py-5 text-white rounded-3xl font-black text-xl shadow-xl transition-all flex items-center justify-center gap-3 shadow-opacity-30", `bg-${tBase}-500 shadow-${tBase}-100 hover:bg-${tBase}-600`)}
+                        className={cn("w-full py-5 text-white rounded-3xl font-bold text-xl shadow-xl transition-all flex items-center justify-center gap-3 shadow-opacity-30", `bg-${tBase}-500 shadow-${tBase}-100 hover:bg-${tBase}-600`)}
                       >
                         <Save size={22} className="stroke-[3px]" />
                         {t.preserve}
@@ -638,16 +675,16 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="bg-amber-100 rounded-[32px] p-8 flex flex-col gap-6 border-2 border-amber-200 shadow-lg shadow-amber-100/30">
+                  <div className="bg-amber-100 rounded-[32px] p-8 flex flex-col gap-6 shadow-lg shadow-amber-100/30">
                     <div className="space-y-3">
-                      <h3 className="text-amber-700 font-black flex items-center gap-2 text-lg">💡 {t.spark}</h3>
+                      <h3 className="text-amber-700 font-bold flex items-center gap-2 text-lg">💡 {t.spark}</h3>
                       <p className="text-amber-900 leading-relaxed font-semibold italic text-lg pr-4">
                         "{t.quote}"
                       </p>
                     </div>
                     <div className="flex -space-x-3">
                       {['🥇', '🔥', '✨', '🌸'].map((emoji, i) => (
-                        <div key={i} className="w-12 h-12 rounded-2xl bg-white border-2 border-amber-200 flex items-center justify-center text-xl shadow-sm transform hover:-translate-y-2 transition-transform cursor-pointer">
+                        <div key={i} className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-xl shadow-sm transform hover:-translate-y-2 transition-transform cursor-pointer">
                           {emoji}
                         </div>
                       ))}
@@ -667,23 +704,23 @@ export default function App() {
               className="max-w-5xl mx-auto pb-24 md:pb-0"
             >
               <div className="text-center mb-16">
-                 <div className={cn("inline-block p-5 bg-white rounded-[40px] shadow-2xl border-b-2 mb-6 relative shadow-opacity-50", `shadow-${tBase}-100 border-${tBase}-50`)}>
+                 <div className={cn("inline-block p-5 bg-white rounded-[40px] shadow-2xl mb-6 relative shadow-opacity-50", `shadow-${tBase}-100`)}>
                    <div className="absolute -top-2 -right-2 bg-amber-400 text-white p-2 rounded-full animate-pulse">
                      <Star size={16} fill="white" />
                    </div>
                    <History className={cn("w-12 h-12", `text-${tBase}-500`)} />
                  </div>
-                 <h2 className={cn("text-6xl font-black mb-2 font-display tracking-tighter", `text-${tBase}-600`)}>{t.harvest}</h2>
-                 <p className={cn("text-xl font-black opacity-80", `text-${tBase}-400`)}>{t.harvestTag}</p>
+                 <h2 className={cn("text-6xl font-bold mb-2 font-display tracking-tighter", `text-${tBase}-600`)}>{t.harvest}</h2>
+                 <p className={cn("text-xl font-bold opacity-80", `text-${tBase}-400`)}>{t.harvestTag}</p>
               </div>
 
               {/* Magic Stats Dashboard */}
               {history.length === 0 ? (
-                <div className={cn("text-center py-20 bg-white rounded-[60px] border-2 border-dashed max-w-2xl mx-auto", `border-${tBase}-50`)}>
+                <div className={cn("text-center py-20 bg-white rounded-[60px] max-w-2xl mx-auto")}>
                    <div className={cn("w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6", `bg-${tBase}-50`)}>
                      <Star size={32} className={cn(`text-${tBase}-100`)} />
                    </div>
-                   <p className={cn("text-xl font-black italic", `text-${tBase}-400`)}>{lang === 'fr' ? 'Votre premier souvenir attend d\'être éclos...' : 'Your first memory is waiting to bloom...'}</p>
+                   <p className={cn("text-xl font-bold italic", `text-${tBase}-400`)}>{lang === 'fr' ? 'Votre premier souvenir attend d\'être éclos...' : 'Your first memory is waiting to bloom...'}</p>
                 </div>
               ) : (
                 <>
@@ -720,16 +757,16 @@ export default function App() {
                     transition={{ delay: i * 0.1 }}
                     key={i} 
                     className={cn(
-                      "p-8 rounded-[40px] border-2 border-white shadow-xl shadow-gray-100 flex flex-col items-center justify-center text-center group transition-all hover:translate-y-[-8px] cursor-default",
+                      "p-8 rounded-[40px] shadow-xl shadow-gray-100 flex flex-col items-center justify-center text-center group transition-all hover:translate-y-[-8px] cursor-default",
                       stat.bg
                     )}
                   >
                     <div className="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-3xl mb-4 transform group-hover:rotate-12 transition-transform">
                       {stat.icon}
                     </div>
-                    <span className={cn("text-4xl font-black mb-1", stat.color)}>{stat.value}</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">{stat.label}</span>
-                    <span className="text-[10px] font-black text-gray-300 italic">{stat.desc}</span>
+                    <span className={cn("text-4xl font-bold mb-1", stat.color)}>{stat.value}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{stat.label}</span>
+                    <span className="text-[10px] font-bold text-gray-300 italic">{stat.desc}</span>
                   </motion.div>
                 ))}
               </div>
@@ -740,7 +777,7 @@ export default function App() {
                 {history.map((item, idx) => (
                     <motion.div 
                       key={item.id} 
-                      className={cn("bg-white p-10 rounded-[50px] border-2 border-transparent shadow-2xl transition-all cursor-pointer group flex flex-col gap-6 relative overflow-hidden", `hover:border-${tBase}-50 shadow-${tBase}-100/20`)}
+                      className={cn("bg-white p-10 rounded-[50px] shadow-2xl transition-all cursor-pointer group flex flex-col gap-6 relative overflow-hidden", `shadow-${tBase}-100/20`)}
                       onClick={() => {
                         setSelectedDate(new Date(item.id));
                         setActiveTab('daily');
@@ -758,15 +795,15 @@ export default function App() {
 
                     <div className="flex justify-between items-start relative z-10">
                       <div className="space-y-1">
-                        <div className={cn("text-xs uppercase tracking-[0.2em] font-black leading-none mb-1", `text-${tBase}-400`)}>{format(new Date(item.id), 'EEEE', { locale })}</div>
-                        <h4 className={cn("text-4xl font-black leading-none tracking-tighter", `text-${tBase}-600`)}>{format(new Date(item.id), 'd MMMM', { locale })}</h4>
+                        <div className={cn("text-xs uppercase tracking-[0.2em] font-bold leading-none mb-1", `text-${tBase}-400`)}>{format(new Date(item.id), 'EEEE', { locale })}</div>
+                        <h4 className={cn("text-4xl font-bold leading-none tracking-tighter", `text-${tBase}-600`)}>{format(new Date(item.id), 'd MMMM', { locale })}</h4>
                       </div>
                       <div className={cn(
-                        "flex flex-col items-center justify-center w-20 h-20 rounded-[30px] border-2 shadow-inner relative overflow-hidden",
-                        item.score >= 8 ? "bg-amber-50 border-amber-100 text-amber-600" : `bg-${tBase}-50 border-${tBase}-100 text-${tBase}-500`
+                        "flex flex-col items-center justify-center w-20 h-20 rounded-[30px] shadow-inner relative overflow-hidden",
+                        item.score >= 8 ? "bg-amber-50 text-amber-600" : `bg-${tBase}-50 text-${tBase}-500`
                       )}>
-                        <span className="text-3xl font-black z-10">{item.score * 10}</span>
-                        <span className="text-[10px] font-black uppercase tracking-widest z-10 opacity-60">Pts</span>
+                        <span className="text-3xl font-bold z-10">{item.score * 10}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest z-10 opacity-60">Pts</span>
                         {item.score === 10 && (
                           <motion.div 
                             animate={{ rotate: 360 }}
@@ -780,17 +817,17 @@ export default function App() {
                     </div>
 
                     <div className="relative group-hover:px-2 transition-all">
-                      <p className={cn("text-xl line-clamp-3 font-black leading-relaxed p-8 rounded-[35px] border-2 shadow-inner text-gray-700 bg-opacity-30", `bg-${tBase}-50 border-${tBase}-50`)}>
+                      <p className={cn("text-xl line-clamp-3 font-bold leading-relaxed p-8 rounded-[35px] shadow-inner text-gray-700 bg-opacity-30", `bg-${tBase}-50`)}>
                         {item.reflection || (lang === 'fr' ? "Une journée gravée dans le temps, remplie de petits éclats de bonheur." : "A day etched in time, filled with small sparks of happiness.")}
                       </p>
                     </div>
 
                     <div className="flex items-center justify-between px-2 pt-2 relative z-10">
-                      <div className={cn("flex items-center gap-1.5 text-sm font-black transition-all", `text-${tBase}-400 group-hover:text-${tBase}-500`)}>
+                      <div className={cn("flex items-center gap-1.5 text-sm font-bold transition-all", `text-${tBase}-400 group-hover:text-${tBase}-500`)}>
                          {t.back} <ChevronRight size={18} className="mt-0.5 group-hover:translate-x-1 transition-transform" />
                       </div>
                       {item.score >= 8 && (
-                        <div className="flex items-center gap-2 bg-amber-100 text-amber-700 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 border-amber-200">
+                        <div className="flex items-center gap-2 bg-amber-100 text-amber-700 px-4 py-2 rounded-2xl text-[10px] font-bold uppercase tracking-widest">
                           <Star size={12} fill="currentColor" /> {t.radiant}
                         </div>
                       )}
@@ -809,23 +846,23 @@ export default function App() {
                     className="max-w-2xl mx-auto pb-24 md:pb-0"
                   >
                     <div className="text-center mb-12">
-                       <div className={cn("inline-block p-4 bg-white rounded-3xl shadow-sm border-2 mb-4", `border-${tBase}-50`)}>
+                       <div className={cn("inline-block p-4 bg-white rounded-3xl shadow-sm mb-4")}>
                           <Settings className={cn("w-10 h-10", `text-${tBase}-500`)} />
                         </div>
-                        <h2 className={cn("text-5xl font-black mb-2", `text-${tBase}-600`)}>{t.rules}</h2>
-                        <p className={cn("text-lg font-black", `text-${tBase}-400`)}>{t.rulesTag}</p>
+                        <h2 className={cn("text-5xl font-bold mb-2", `text-${tBase}-600`)}>{t.rules}</h2>
+                        <p className={cn("text-lg font-bold", `text-${tBase}-400`)}>{t.rulesTag}</p>
                     </div>
 
               <div className="flex flex-col gap-8">
                 {/* Theme Selection */}
-                <div className={cn("bg-white rounded-[40px] p-8 border-2 shadow-xl shadow-opacity-30", `border-${tBase}-50 shadow-${tBase}-100/30`)}>
+                <div className={cn("bg-white rounded-[40px] p-8 shadow-xl shadow-opacity-30", `shadow-${tBase}-100/30`)}>
                   <div className="flex items-center gap-4 mb-6">
                     <div className={cn("w-10 h-10 text-white rounded-2xl flex items-center justify-center", `bg-${tBase}-500`)}>
                       <Flower2 size={20} />
                     </div>
                     <div className="flex flex-col">
-                      <h3 className="text-xl font-black text-gray-700">{t.chooseTheme}</h3>
-                      <p className="text-xs font-black text-gray-400">{t.themeTag}</p>
+                      <h3 className="text-xl font-bold text-gray-700">{t.chooseTheme}</h3>
+                      <p className="text-xs font-bold text-gray-400">{t.themeTag}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -834,10 +871,10 @@ export default function App() {
                         key={th.id}
                         onClick={() => updateSettings({ theme: th.id })}
                         className={cn(
-                          "p-4 rounded-3xl border-2 transition-all flex flex-col items-center gap-3 group relative overflow-hidden",
+                          "p-4 rounded-3xl transition-all flex flex-col items-center gap-3 group relative overflow-hidden",
                           theme === th.id 
-                            ? `border-${th.color}-500 bg-${th.color}-50 shadow-lg shadow-${th.color}-100` 
-                            : `border-gray-50 bg-white hover:border-${th.color}-100`
+                            ? `bg-${th.color}-50 shadow-lg shadow-${th.color}-100` 
+                            : `bg-white hover:bg-${th.color}-50`
                         )}
                       >
                         <div className={cn(
@@ -847,7 +884,7 @@ export default function App() {
                           <Flower2 size={24} />
                         </div>
                         <span className={cn(
-                          "text-xs font-black uppercase tracking-widest",
+                          "text-xs font-bold uppercase tracking-widest",
                           theme === th.id ? `text-${th.color}-600` : "text-gray-400"
                         )}>
                           {th.name[lang]}
@@ -864,18 +901,18 @@ export default function App() {
                 </div>
 
                 {/* Language Switcher */}
-                <div className={cn("bg-white rounded-[40px] p-8 border-2 shadow-xl shadow-opacity-30", `border-${tBase}-50 shadow-${tBase}-100/30`)}>
+                <div className={cn("bg-white rounded-[40px] p-8 shadow-xl shadow-opacity-30", `shadow-${tBase}-100/30`)}>
                   <div className="flex items-center gap-4 mb-6">
                     <div className={cn("w-10 h-10 text-white rounded-2xl flex items-center justify-center", `bg-${tBase}-500`)}>
                       <Languages size={20} />
                     </div>
-                    <h3 className="text-xl font-black text-gray-700">{t.language}</h3>
+                    <h3 className="text-xl font-bold text-gray-700">{t.language}</h3>
                   </div>
                   <div className="flex gap-4">
                     <button 
                       onClick={() => setLang('en')}
                       className={cn(
-                        "flex-1 py-4 rounded-2xl font-black transition-all",
+                        "flex-1 py-4 rounded-2xl font-bold transition-all",
                         lang === 'en' ? `bg-${tBase}-500 text-white shadow-xl shadow-${tBase}-100` : `bg-${tBase}-50 text-${tBase}-400 hover:bg-${tBase}-100`
                       )}
                     >
@@ -884,7 +921,7 @@ export default function App() {
                     <button 
                       onClick={() => setLang('fr')}
                       className={cn(
-                        "flex-1 py-4 rounded-2xl font-black transition-all",
+                        "flex-1 py-4 rounded-2xl font-bold transition-all",
                         lang === 'fr' ? `bg-${tBase}-500 text-white shadow-xl shadow-${tBase}-100` : `bg-${tBase}-50 text-${tBase}-400 hover:bg-${tBase}-100`
                       )}
                     >
@@ -894,13 +931,13 @@ export default function App() {
                 </div>
 
                 {/* Predefined Tasks */}
-                <div className={cn("bg-white rounded-[40px] p-10 border-2 shadow-2xl relative overflow-hidden shadow-opacity-40", `border-${tBase}-50 shadow-${tBase}-100/50`)}>
+                <div className={cn("bg-white rounded-[40px] p-10 shadow-2xl relative overflow-hidden shadow-opacity-40", `shadow-${tBase}-100/50`)}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
                     {settings.predefinedTasks.map((task, idx) => (
                       <motion.div 
                         layout
                         key={idx} 
-                        className={cn("flex items-center gap-4 p-5 rounded-2xl group border-2 border-transparent transition-all shadow-sm bg-opacity-30", `bg-${tBase}-50 hover:border-${tBase}-100`)}
+                        className={cn("flex items-center gap-4 p-5 rounded-2xl group transition-all shadow-sm bg-opacity-30", `bg-${tBase}-50 hover:bg-${tBase}-100`)}
                       >
                         <div className={cn("w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm", `text-${tBase}-400`)}>
                           <Flower2 size={16} />
@@ -920,7 +957,7 @@ export default function App() {
                                   }
                                   setEditingIdx(null);
                                 }}
-                                className={cn("flex-grow bg-white border-2 rounded-xl px-3 py-1 font-black outline-none shadow-inner", `border-${tBase}-400 text-${tBase}-600`)}
+                                className={cn("flex-grow bg-white rounded-xl px-3 py-1 font-bold outline-none shadow-inner", `text-${tBase}-600`)}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') {
                                     if (editValue.trim() !== "") {
@@ -950,7 +987,7 @@ export default function App() {
                           </div>
                         ) : (
                           <span 
-                            className={cn("flex-grow text-base font-black cursor-pointer transition-colors text-gray-700", `hover:text-${tBase}-500`)}
+                            className={cn("flex-grow text-base font-bold cursor-pointer transition-colors text-gray-700", `hover:text-${tBase}-500`)}
                             onClick={() => {
                               setEditingIdx(idx);
                               setEditValue(task);
@@ -1005,7 +1042,7 @@ export default function App() {
                       id="core-petal-input"
                       type="text" 
                       placeholder={t.corePetal}
-                      className={cn("w-full border-2 border-transparent rounded-3xl p-6 pl-20 text-lg font-black focus:ring-0 transition-all shadow-inner", `bg-${tBase}-50 focus:border-${tBase}-100 text-${tBase}-600 placeholder:${tBase}-400/30`)}
+                      className={cn("w-full rounded-3xl p-6 pl-20 text-lg font-bold focus:ring-0 transition-all shadow-inner", `bg-${tBase}-50 text-${tBase}-600 placeholder:${tBase}-400/30`)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           const val = (e.target as HTMLInputElement).value;
@@ -1023,7 +1060,7 @@ export default function App() {
               <div className="mt-16 md:hidden">
                 <button 
                   onClick={handleLogout}
-                  className={cn("w-full py-5 bg-white border-2 rounded-3xl font-black flex items-center justify-center gap-3 shadow-sm active:scale-95 transition-all text-gray-400", `border-${tBase}-50 hover:text-${tBase}-500`)}
+                  className={cn("w-full py-5 bg-white rounded-3xl font-bold flex items-center justify-center gap-3 shadow-sm active:scale-95 transition-all text-gray-400", `hover:text-${tBase}-500`)}
                 >
                   <LogOut size={22} />
                   {t.logout}
@@ -1034,7 +1071,7 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      <div className={cn("md:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 px-8 py-5 flex justify-around rounded-t-[40px] z-50 shadow-[0_-20px_40px_rgba(0,0,0,0.05)]", `border-${tBase}-50`)}>
+      <div className={cn("md:hidden fixed bottom-0 left-0 right-0 bg-white px-8 py-5 flex justify-around rounded-t-[40px] z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]")}>
         <MobileNavBtn active={activeTab === 'daily'} onClick={() => setActiveTab('daily')} icon={<Calendar size={24} />} title={lang === 'fr' ? 'Jour' : 'Day'} color={tBase} />
         <MobileNavBtn active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History size={24} />} title={lang === 'fr' ? 'Magie' : 'Magic'} color={tBase} />
         <MobileNavBtn active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={24} />} title={lang === 'fr' ? 'Pétales' : 'Petals'} color={tBase} />
@@ -1133,6 +1170,7 @@ const SwipeableTask: React.FC<SwipeableTaskProps> = ({ task, onToggle, onDelete,
   useEffect(() => {
     if (task.completed) {
       setIsSparkling(true);
+      playBloomSound();
       const timer = setTimeout(() => setIsSparkling(false), 1000);
       return () => clearTimeout(timer);
     }
@@ -1155,11 +1193,11 @@ const SwipeableTask: React.FC<SwipeableTaskProps> = ({ task, onToggle, onDelete,
           scale: { duration: 0.3 } 
         }}
         className={cn(
-          "task-card flex items-center justify-between p-5 rounded-2xl border-2 transition-all relative z-10",
+          "task-card flex items-center justify-between p-5 rounded-2xl transition-all relative z-10",
           task.completed 
-            ? "border-emerald-200 bg-emerald-50/80" 
-            : cn("border-transparent bg-white shadow-opacity-10", `shadow-${color}-100`),
-          !readOnly && !task.completed && cn("cursor-pointer", `hover:border-${color}-50`),
+            ? "bg-emerald-50/80 shadow-emerald-50" 
+            : cn("bg-white shadow-opacity-10", `shadow-${color}-100`),
+          !readOnly && !task.completed && cn("cursor-pointer"),
           readOnly && "cursor-default"
         )}
         onTap={(e) => {
@@ -1205,11 +1243,11 @@ const SwipeableTask: React.FC<SwipeableTaskProps> = ({ task, onToggle, onDelete,
             }}
             transition={{ duration: 0.5, ease: "backOut" }}
             className={cn(
-              "w-9 h-9 rounded-xl border-2 flex items-center justify-center transition-all relative z-10 font-black",
+              "w-9 h-9 rounded-xl flex items-center justify-center transition-all relative z-10 font-bold",
               task.completed 
-                ? "border-emerald-500 text-white shadow-lg shadow-emerald-200" 
-                : cn(`border-${color}-400 text-transparent`),
-              !readOnly && !task.completed && `group-hover:border-${color}-500`
+                ? "bg-emerald-500 text-white shadow-lg shadow-emerald-200" 
+                : cn(`text-transparent bg-white shadow-sm`),
+              !readOnly && !task.completed
             )}
           >
             <AnimatePresence mode="wait">
@@ -1237,7 +1275,7 @@ const SwipeableTask: React.FC<SwipeableTaskProps> = ({ task, onToggle, onDelete,
           
           <div className="flex flex-col">
             <span className={cn(
-              "text-lg font-black transition-all relative z-10",
+              "text-lg font-bold transition-all relative z-10",
               task.completed ? "text-emerald-700/50 line-through italic" : "text-gray-700"
             )}>
               {task.text}
@@ -1245,14 +1283,14 @@ const SwipeableTask: React.FC<SwipeableTaskProps> = ({ task, onToggle, onDelete,
             <div className="flex items-center gap-2 mt-1">
               {task.isPredefined && (
                 <span className={cn(
-                  "text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md inline-block w-fit",
+                  "text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md inline-block w-fit",
                   task.completed ? "bg-emerald-100/50 text-emerald-600" : `bg-${color}-50 text-${color}-400`
                 )}>
                   {t.core}
                 </span>
               )}
               {task.reminderTime && (
-                <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-500 flex items-center gap-1">
+                <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-500 flex items-center gap-1">
                   <Bell size={8} fill="currentColor" /> {task.reminderTime}
                 </span>
               )}
@@ -1278,13 +1316,13 @@ const SwipeableTask: React.FC<SwipeableTaskProps> = ({ task, onToggle, onDelete,
                   initial={{ opacity: 0, x: 10, scale: 0.9 }}
                   animate={{ opacity: 1, x: 0, scale: 1 }}
                   exit={{ opacity: 0, x: 10, scale: 0.9 }}
-                  className={cn("absolute right-full mr-2 bg-white border-2 p-2 rounded-xl shadow-xl flex items-center gap-2 z-50 shrink-0", `border-${color}-50`)}
+                  className={cn("absolute right-full mr-2 bg-white p-2 rounded-xl shadow-xl flex items-center gap-2 z-50 shrink-0")}
                 >
                   <input 
                     type="time" 
                     defaultValue={task.reminderTime || "08:00"}
                     onChange={(e) => onSetReminder(e.target.value)}
-                    className={cn("text-xs font-black border-none p-1 focus:ring-0", `text-${color}-500`)}
+                    className={cn("text-xs font-bold border-none p-1 focus:ring-0", `text-${color}-500`)}
                   />
                   <button 
                     onClick={() => setShowTimePicker(false)}
@@ -1297,7 +1335,7 @@ const SwipeableTask: React.FC<SwipeableTaskProps> = ({ task, onToggle, onDelete,
                       onSetReminder(null);
                       setShowTimePicker(false);
                     }}
-                    className={cn("p-1 rounded-lg text-[8px] font-black hover:bg-opacity-80 transition-all", `text-${color}-400 hover:bg-${color}-50`)}
+                    className={cn("p-1 rounded-lg text-[8px] font-bold hover:bg-opacity-80 transition-all", `text-${color}-400 hover:bg-${color}-50`)}
                   >
                     DEL
                   </button>
@@ -1387,7 +1425,7 @@ function OnboardingQuiz({ onComplete, lang }: { onComplete: (data: any) => void,
         key={step}
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
-        className={cn("max-w-md w-full bg-white p-10 rounded-[60px] border-b-2 shadow-2xl text-center shadow-rose-100/50 border-rose-50")}
+        className={cn("max-w-md w-full bg-white p-10 rounded-[60px] shadow-2xl text-center shadow-rose-100/50")}
       >
         <div className="mb-6 flex justify-center">
           <div className="p-4 rounded-3xl bg-rose-50">
@@ -1395,8 +1433,8 @@ function OnboardingQuiz({ onComplete, lang }: { onComplete: (data: any) => void,
           </div>
         </div>
         
-        <h2 className="text-3xl font-black mb-2 text-rose-600">{currentStep.title}</h2>
-        <p className="font-black mb-10 text-rose-400">{currentStep.subtitle}</p>
+        <h2 className="text-3xl font-bold mb-2 text-rose-600">{currentStep.title}</h2>
+        <p className="font-bold mb-10 text-rose-400">{currentStep.subtitle}</p>
 
         <div className="flex flex-col gap-4">
           {currentStep.options.map((option) => (
@@ -1412,7 +1450,7 @@ function OnboardingQuiz({ onComplete, lang }: { onComplete: (data: any) => void,
                   onComplete(newData);
                 }
               }}
-              className="py-5 rounded-3xl font-black border-2 border-transparent hover:bg-white transition-all shadow-sm bg-rose-50 text-rose-500 hover:border-rose-100"
+              className="py-5 rounded-3xl font-bold hover:bg-white transition-all shadow-sm bg-rose-50 text-rose-500"
             >
               {option.label}
             </motion.button>
@@ -1449,7 +1487,7 @@ function NavBtn({ active, onClick, icon, label, color = 'rose' }: { active: bool
       )}>
         {icon}
       </div>
-      <span className="font-black text-base tracking-tight">{label}</span>
+      <span className="font-bold text-base tracking-tight">{label}</span>
       {active && (
         <motion.div 
           layoutId="activePill"
@@ -1470,7 +1508,7 @@ function MobileNavBtn({ active, onClick, icon, title, color = 'rose' }: { active
         {icon}
       </div>
       <span className={cn(
-        "text-[10px] font-black uppercase tracking-widest",
+        "text-[10px] font-bold uppercase tracking-widest",
         active ? `text-${color}-500` : `text-${color}-400`
       )}>{title}</span>
     </button>
